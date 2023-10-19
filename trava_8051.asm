@@ -4,41 +4,119 @@ EN EQU P1.2 ; Enable em P1.2
 
 ORG 00H
 LJMP START
-; senha padrao 4 3 2 1 0
-ORG 50H
-SENHA:
-	;DB 52, 51, 50, 49, 48, 0
-	DB "43210"
+
+ORG 40H
+STRINGINICIO:
+	DB "TRAVA DIGITAL"
 	DB 0
-; senha tentativa
-ORG 60H
-TENTATIVA:
-	DB "43210"
+
+STRINGINPUT:
+	DB "DIGITE SENHA"
 	DB 0
-;
-ORG 200H
+
+STRINGERRO:
+	DB "ERROU"
+	DB 0
+
+STRING:
+	DB "LIBERADO"
+	DB 0
+
 START:
+	MOV 40H, #'#' 
+	MOV 41H, #'0'
+	MOV 42H, #'*'
+	MOV 43H, #'9'
+	MOV 44H, #'8'
+	MOV 45H, #'7'
+	MOV 46H, #'6'
+	MOV 47H, #'5'
+	MOV 48H, #'4'
+	MOV 49H, #'3'
+	MOV 4AH, #'2'
+	MOV 4BH, #'1'
+	ACALL SENHADEF
+	ACALL FECHA
+	ACALL LCD_INIT
+	ACALL MENSAGEMINIDISPLAY
+	MOV R7, #03H ; numero de tentativas
+	CALL DELAY50 ;
 
 MAIN:
-;ACALL LCD_INIT
-ACALL FECHA
-SJMP $
-MOV R7, #03H ; numero de tentativas
+	ACALL LIMPADISPLAY
+	MOV R5, #05H
+LOOP:
+	ACALL LETECLADO
+	JNB F0, LOOP  
+	MOV A, R5
+	ACALL POSCURSOR	
+	CALL DELAY50
+	ACALL POSCURSOR
+	CLR F0
+	DJNZ R5, LOOP
+	SJMP $
 
 CHECASENHA:
-MOV R6, #05H
-MOV R1, #60H
-MOV DPTR, #SENHA
+	MOV R6, #05H
+	MOV R1, #60H
 PROXCHAR:
 CLR A
-MOVC A,@A+DPTR
-XRL A, @R1 ; 0 se forem iguais
 JNZ ERROU
+DJNZ R6, PROXCHAR
 DEC R7
+
+ACERTOU:
+	MOV R7, #03H ; numero de tentativas reseta
+	ACALL ABRE
 
 ERROU:
 	JMP $
 
+; Teclado
+
+LETECLADO:
+	MOV R0, #0			
+
+	; row0
+	MOV P0, #0FFh	
+	CLR P0.0
+	CALL LECOLUNA
+	JB F0, TERMINO
+						
+	; row1
+	SETB P0.0
+	CLR P0.1
+	CALL LECOLUNA
+	JB F0, TERMINO
+
+	; row2
+	SETB P0.1
+	CLR P0.2
+	CALL LECOLUNA
+	JB F0, TERMINO	
+
+	; scan row3
+	SETB P0.2
+	CLR P0.3
+	CALL LECOLUNA
+	JB F0, TERMINO			
+TERMINO:
+	RET
+
+LECOLUNA:
+	JNB P0.4, PRESSIONADO
+	INC R0			
+	JNB P0.5, PRESSIONADO
+	INC R0			
+	JNB P0.6, PRESSIONADO
+	INC R0			
+	RET				
+PRESSIONADO:
+	SETB F0			
+	RET			
+
+
+; LCD
 LCD_INIT:
 	CLR RS
 	CLR P1.7
@@ -83,17 +161,157 @@ LCD_INIT:
 	CALL DELAY50
 	RET
 
+
+MOSTRACHAR:
+	SETB RS  	
+	MOV C, ACC.7	
+	MOV P1.7, C		
+	MOV C, ACC.6		
+	MOV P1.6, C		
+	MOV C, ACC.5	
+	MOV P1.5, C		
+	MOV C, ACC.4	
+	MOV P1.4, C		
+
+	SETB EN		
+	CLR EN		
+
+	MOV C, ACC.3	
+	MOV P1.7, C		
+	MOV C, ACC.2	
+	MOV P1.6, C		
+	MOV C, ACC.1	
+	MOV P1.5, C		
+	MOV C, ACC.0	
+	MOV P1.4, C		
+
+	SETB EN		
+	CLR EN		
+
+	CALL DELAY50
+	RET
+
+;Posiciona o cursor na linha e coluna desejada.
+;Escreva no Acumulador o valor de endere o da linha e coluna.
+;|--------------------------------------------------------------------------------------|
+;|linha 1 | 00 | 01 | 02 | 03 | 04 |05 | 06 | 07 | 08 | 09 |0A | 0B | 0C | 0D | 0E | 0F |
+;|linha 2 | 40 | 41 | 42 | 43 | 44 |45 | 46 | 47 | 48 | 49 |4A | 4B | 4C | 4D | 4E | 4F |
+;|--------------------------------------------------------------------------------------|
+POSCURSOR:
+	CLR RS	         
+	SETB P1.7		    
+	MOV C, ACC.6		
+	MOV P1.6, C			
+	MOV C, ACC.5		
+	MOV P1.5, C	
+	MOV C, ACC.4
+	MOV P1.4, C	
+
+	SETB EN		
+	CLR EN		
+
+	MOV C, ACC.3
+	MOV P1.7, C	
+	MOV C, ACC.2
+	MOV P1.6, C	
+	MOV C, ACC.1
+	MOV P1.5, C	
+	MOV C, ACC.0
+	MOV P1.4, C	
+
+	SETB EN		
+	CLR EN		
+
+	CALL DELAY50
+	RET
+
+;Retorna o cursor para primeira posi  o sem limpar o display
+CURSORINI:
+	CLR RS	
+	CLR P1.7
+	CLR P1.6
+	CLR P1.5
+	CLR P1.4
+
+	SETB EN	
+	CLR EN	
+
+	CLR P1.7
+	CLR P1.6
+	SETB P1.5	
+	SETB P1.4	
+
+	SETB EN		
+	CLR EN		
+
+	CALL DELAY50
+	RET
+
+LIMPADISPLAY:
+	CLR RS	    
+	CLR P1.7		
+	CLR P1.6		
+	CLR P1.5		
+	CLR P1.4		
+
+	SETB EN		
+	CLR EN	
+
+	CLR P1.7	
+	CLR P1.6	
+	CLR P1.5	
+	SETB P1.4	
+
+	SETB EN		
+	CLR EN		
+
+	CALL DELAY50	
+	RET
+
+ESCREVESTRING:
+  MOV R1, #00h
+LOOPSTRING:
+	MOV A, R1
+	MOVC A,@A+DPTR 
+	JZ FIMSTRING	
+	ACALL MOSTRACHAR
+	INC R1		
+	MOV A, R1
+	JMP LOOPSTRING		
+FIMSTRING:
+	RET
+
+; Mensagem inicial
+MENSAGEMINIDISPLAY:
+	MOV A, #02h
+	ACALL POSCURSOR 
+	MOV DPTR,#STRINGINICIO
+	ACALL ESCREVESTRING
+	ACALL CURSORINI
+	RET
+
+MENSAGEMINPUT:
+	MOV A, #01h
+	ACALL POSCURSOR 
+	MOV DPTR,#STRINGINPUT
+	ACALL ESCREVESTRING
+	ACALL CURSORINI
+	RET
+
+; Motor
 ABRE:
-CLR P3.0
-SETB P3.1
-CALL DELAYMOTOR
-CLR P3.1
+	CLR P3.0
+	SETB P3.1
+	CALL DELAYMOTOR
+	CLR P3.1
+	RET
 
 FECHA:
-SETB P3.0
-CLR P3.1
-CALL DELAYMOTOR
-CLR P3.0
+	SETB P3.0
+	CLR P3.1
+	CALL DELAYMOTOR
+	CLR P3.0
+	RET
 
 DELAY50:
 	MOV R0, #50
@@ -103,4 +321,19 @@ DELAY50:
 DELAYMOTOR:
 	MOV R0, #13 ; Delay para fechar
 	DJNZ R0, $
+	RET
+;
+
+; Senha
+SENHADEF:
+; 52, 51, 50, 49, 48, 0
+	MOV R0, #05H
+	MOV R1, #60H
+	MOV A, #34H
+	LOOPSENHA:
+	MOV @R1, A
+	INC R1
+	DEC A
+	DJNZ R0, LOOPSENHA
+	MOV @R1, #0H
 	RET
