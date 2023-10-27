@@ -1,3 +1,7 @@
+; PROBLEMAS
+; Se o primeiro valor for 1, ele nao aceita
+
+
 ; Mapeamento hardware
 RS EQU P1.3 ; Reg Select em P1.3
 EN EQU P1.2 ; Enable em P1.2
@@ -18,7 +22,7 @@ STRINGERRO:
 	DB "ERROU"
 	DB 0
 
-STRING:
+STRINGACERTOU:
 	DB "LIBERADO"
 	DB 0
 
@@ -41,24 +45,57 @@ START:
 	ACALL MENSAGEMINIDISPLAY
 	MOV R7, #03H ; numero de tentativas
 	CALL DELAY50 ;
-
 MAIN:
 	ACALL LIMPADISPLAY
-	MOV R5, #05H
+	MOV R5, #00H
+	MOV R1, #70H
 LOOP:
 	ACALL LETECLADO
-	JNB F0, LOOP  
+;MOV A, #0H
+;MOV @R1, A
+;INC R1
+	JNB F0, LOOP
+;	Caso tenha pressionado algo
+;	Pega o valor e joga na memoria
+	MOV A, #40h
+	ADD A, R0
+	MOV R0, A
+	MOV A, @R0
+	MOV @R1, A
+	INC R1
+;	Mostra um asterisco na tela
 	MOV A, R5
-	ACALL POSCURSOR	
-	CALL DELAY50
+	ADD A, #46H
 	ACALL POSCURSOR
+JMP $
+	CALL DELAY50
+	MOV A, #'*'
+	ACALL MOSTRACHAR
+
 	CLR F0
-	DJNZ R5, LOOP
+	INC R5
+	CALL DELAY50
+;	Ainda nao pegou 5 digitos, volta
+	CJNE R5, #05H, LOOP
+;	Caso tenha pego 5 digitos
+	ACALL CHECASENHA
 	SJMP $
 
 CHECASENHA:
-	MOV R6, #05H
-	MOV R1, #60H
+	MOV R0, #60H
+	MOV R1, #70H
+	MOV R5, #00H
+	LOOPCHECK:
+	MOV A, @R0
+	SUBB A, @R1
+	JNZ ERROU
+	INC R0
+	INC R1
+	INC R5
+	CJNE R5, #05H, LOOPCHECK
+	ACALL ACERTOU
+	RET
+
 PROXCHAR:
 CLR A
 JNZ ERROU
@@ -68,8 +105,11 @@ DEC R7
 ACERTOU:
 	MOV R7, #03H ; numero de tentativas reseta
 	ACALL ABRE
+	JMP $
 
 ERROU:
+	ACALL LIMPADISPLAY
+	DEC R7
 	JMP $
 
 ; Teclado
@@ -314,8 +354,8 @@ FECHA:
 	RET
 
 DELAY50:
-	MOV R0, #50
-	DJNZ R0, $
+	MOV R6, #50
+	DJNZ R6, $
 	RET
 
 DELAYMOTOR:
