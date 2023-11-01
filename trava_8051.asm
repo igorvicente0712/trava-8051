@@ -66,7 +66,6 @@ START:
 	ACALL SENHAPADRAO
 	ACALL FECHA
 	ACALL LCD_INIT
-ACALL REDEFINIR
 	ACALL MENSAGEMINIDISPLAY
 	ACALL MENSAGEMINSTRUCAO
 	MOV R7, #03H ; numero de tentativas
@@ -82,6 +81,18 @@ LOOP:
 ;	Caso tenha pressionado algo
 ;	Pega o valor e joga na memoria
 
+; Se for # ou *, redefinir senha
+	CLR A
+	CLR C
+	MOV A, #02H
+	SUBB A, R0
+	JZ REDEFINIR
+	
+	CLR A
+	CLR C
+	MOV A, #00H
+	SUBB A, R0
+	JZ REDEFINIR
 
 	MOV A, #40h
 	ADD A, R0
@@ -136,6 +147,7 @@ ERROU:
 	ACALL OOPS
 
 REDEFINIR:
+	CLR F0
 	ACALL LIMPADISPLAY
 	ACALL MENSAGENOVASENHA
 	MOV R5, #00H
