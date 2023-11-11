@@ -186,15 +186,16 @@ CHECASENHAVALIDA:
 	; Verfica se eh um digito valido
 	CLR A
 	CLR C
-	MOV A, #00H ; Nao pode #
+	MOV A, #2AH ; Nao pode #
 	SUBB A, @R1
 	JZ CHAMAMENSAGEMINVALIDO
 	CLR A
 	CLR C
-	MOV A, #02H ; Nao pode *
+	MOV A, #23H ; Nao pode *
 	SUBB A, @R1
 	JZ CHAMAMENSAGEMINVALIDO
 	INC R5
+	INC R1
 	CJNE R5, #05H, LOOPVALIDA
 	LJMP MAIN
 
